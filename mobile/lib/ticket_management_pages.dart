@@ -157,6 +157,15 @@ class _TicketManagementPageState extends State<TicketManagementPage> {
                                     context,
                                     ticket.status,
                                   ),
+                                  if (ticket.isResponseOverdue)
+                                    const Chip(
+                                      avatar: Icon(
+                                        Icons.warning_amber_outlined,
+                                        size: 18,
+                                      ),
+                                      label: Text('Terlambat respons'),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
                                 ],
                               ),
                               subtitle: Text(
@@ -312,6 +321,15 @@ class _TicketManagementDetailPageState
                             ),
                             StatusIndicator.ticket(
                                 context, widget.ticket.status),
+                            if (widget.ticket.isResponseOverdue)
+                              const Chip(
+                                avatar: Icon(
+                                  Icons.warning_amber_outlined,
+                                  size: 18,
+                                ),
+                                label: Text('Terlambat respons'),
+                                visualDensity: VisualDensity.compact,
+                              ),
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -485,6 +503,12 @@ class _TicketManagementDetailPageState
             context,
             Icons.timelapse,
             'Batas respons ${_dateLabel(widget.ticket.responseDueAt!)}',
+          ),
+        if (widget.ticket.respondedAt != null)
+          _detailRow(
+            context,
+            Icons.check_circle_outline,
+            'Respons awal ${_dateLabel(widget.ticket.respondedAt!)}',
           ),
         if (widget.ticket.completionDueAt != null)
           _detailRow(

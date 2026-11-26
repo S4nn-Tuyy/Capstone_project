@@ -5,6 +5,25 @@ import 'package:wesbar/m0_repository.dart';
 import 'package:wesbar/ticket_management_pages.dart';
 import 'package:wesbar/ticket_management_repository.dart';
 
+ManagedTicket _ticketForResponseDeadline({
+  required DateTime dueAt,
+  DateTime? respondedAt,
+}) =>
+    ManagedTicket(
+      id: 'ticket-deadline',
+      reporterName: 'Warga',
+      rtId: 'rt-01',
+      category: 'fasilitas',
+      priority: 'sedang',
+      level: 'rt',
+      status: respondedAt == null ? 'baru' : 'ditugaskan',
+      description: 'Lampu jalan mati.',
+      address: 'Jalan Melati · RT 01 · RW 05',
+      createdAt: DateTime.utc(2026, 11, 24, 10),
+      responseDueAt: dueAt,
+      respondedAt: respondedAt,
+    );
+
 class _FakeTicketManagementGateway implements TicketManagementGateway {
   _FakeTicketManagementGateway(this.items);
 
@@ -91,6 +110,23 @@ void main() {
     expect(event.actorName, 'Pengurus RT');
   });
 
+  test('response becomes overdue at its calendar deadline until responded', () {
+    final dueAt = DateTime.utc(2026, 11, 25, 10);
+    final unresponded = _ticketForResponseDeadline(dueAt: dueAt);
+    final responded = _ticketForResponseDeadline(
+      dueAt: dueAt,
+      respondedAt: dueAt,
+    );
+
+    expect(unresponded.isResponseOverdueAt(dueAt), isTrue);
+    expect(
+      unresponded
+          .isResponseOverdueAt(dueAt.subtract(const Duration(seconds: 1))),
+      isFalse,
+    );
+    expect(responded.isResponseOverdueAt(dueAt), isFalse);
+  });
+
   test('managed ticket parses address and nullable SLA deadlines', () {
     final parsed = ManagedTicket.fromJson({
       'id': 'ticket-1',
@@ -106,6 +142,7 @@ void main() {
       'tenggat_respons_at': null,
       'tenggat_selesai_at': null,
       'created_at': '2026-11-25T10:00:00Z',
+      'direspons_at': null,
       'pelapor': {'full_name': 'Ani Warga'},
       'unit': {
         'nomor': '7',
@@ -121,6 +158,7 @@ void main() {
     expect(parsed.address, 'Jalan Melati · No. 7 · RT 01 · RW 05');
     expect(parsed.responseDueAt, isNull);
     expect(parsed.completionDueAt, isNull);
+    expect(parsed.respondedAt, isNull);
   });
 
   testWidgets('RT manager can open a ticket and update its status',

@@ -18,6 +18,7 @@ class ManagedTicket {
     this.photoPath,
     this.responseDueAt,
     this.completionDueAt,
+    this.respondedAt,
   });
 
   final String id;
@@ -33,6 +34,14 @@ class ManagedTicket {
   final String? photoPath;
   final DateTime? responseDueAt;
   final DateTime? completionDueAt;
+  final DateTime? respondedAt;
+
+  bool isResponseOverdueAt(DateTime now) =>
+      responseDueAt != null &&
+      respondedAt == null &&
+      !now.isBefore(responseDueAt!);
+
+  bool get isResponseOverdue => isResponseOverdueAt(DateTime.now());
 
   factory ManagedTicket.fromJson(Map<String, dynamic> json) {
     final reporter = json['pelapor'] as Map<String, dynamic>?;
@@ -64,6 +73,7 @@ class ManagedTicket {
       photoPath: json['foto_path'] as String?,
       responseDueAt: _parseDate(json['tenggat_respons_at']),
       completionDueAt: _parseDate(json['tenggat_selesai_at']),
+      respondedAt: _parseDate(json['direspons_at']),
     );
   }
 
@@ -133,7 +143,7 @@ class SupabaseTicketManagementGateway implements TicketManagementGateway {
   static const photoExpirySeconds = SupabaseTicketGateway.photoExpirySeconds;
   static const _ticketSelect = 'id, pelapor_id, rt_id, unit_id, kategori, '
       'prioritas, level, status, deskripsi, foto_path, tenggat_respons_at, '
-      'tenggat_selesai_at, created_at, '
+      'tenggat_selesai_at, created_at, direspons_at, '
       'pelapor:profiles!tiket_pelapor_id_fkey(full_name), '
       'unit:unit_rumah!tiket_unit_id_fkey('
       'nomor, jalan:jalan!unit_rumah_jalan_id_fkey(nama)), '
