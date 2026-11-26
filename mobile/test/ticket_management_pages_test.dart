@@ -10,6 +10,7 @@ class _FakeTicketManagementGateway implements TicketManagementGateway {
 
   List<ManagedTicket> items;
   String? updatedStatus;
+  String? escalationReason;
   bool escalated = false;
 
   @override
@@ -41,7 +42,9 @@ class _FakeTicketManagementGateway implements TicketManagementGateway {
   Future<void> escalate({
     required ResidentProfile profile,
     required String ticketId,
+    required String reason,
   }) async {
+    escalationReason = reason;
     escalated = true;
   }
 
@@ -71,6 +74,22 @@ void main() {
     address: 'Jalan Melati No. 7 · RT 01 · RW 05',
     createdAt: DateTime.utc(2026, 11, 25, 10),
   );
+
+  test('ticket history parses escalation reason', () {
+    final event = TicketHistoryEvent.fromJson({
+      'aksi': 'eskalasi',
+      'status_sebelum': null,
+      'status_sesudah': null,
+      'level_sebelum': 'rt',
+      'level_sesudah': 'rw',
+      'catatan': 'Perlu penanganan fasilitas RW.',
+      'created_at': '2026-11-25T10:00:00Z',
+      'actor': {'full_name': 'Pengurus RT'},
+    });
+
+    expect(event.note, 'Perlu penanganan fasilitas RW.');
+    expect(event.actorName, 'Pengurus RT');
+  });
 
   test('managed ticket parses address and nullable SLA deadlines', () {
     final parsed = ManagedTicket.fromJson({
@@ -135,7 +154,8 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('RT manager confirms escalation to RW', (tester) async {
+  testWidgets('RT manager records a reason when escalating to RW',
+      (tester) async {
     tester.view.physicalSize = const Size(900, 1400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -153,10 +173,16 @@ void main() {
     await tester.tap(find.byKey(const Key('ticket_escalate')));
     await tester.pumpAndSettle();
     expect(find.text('Eskalasi tiket ke RW?'), findsOneWidget);
+    final submitButton = find.widgetWithText(FilledButton, 'Eskalasi');
+    expect(tester.widget<FilledButton>(submitButton).onPressed, isNull);
+    final reasonField = find.byKey(const Key('ticket_escalation_reason'));
+    await tester.enterText(reasonField, 'Perlu penanganan fasilitas RW.');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Eskalasi'));
     await tester.pumpAndSettle();
 
     expect(gateway.escalated, isTrue);
+    expect(gateway.escalationReason, 'Perlu penanganan fasilitas RW.');
     expect(find.text('Tiket wilayah'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });

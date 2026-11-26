@@ -2,7 +2,7 @@
 
 Aplikasi berfokus pada RW 5; alamat warga ditautkan ke jalan, RT, dan RW 05. PB-01 mencakup pengelolaan nama dan alamat warga oleh pengurus RT di wilayahnya atau admin; perubahan dicatat tanpa menyalin nama/alamat ke detail audit. Migrasi `0013_profile_management.sql` menambahkan izin database dan audit untuk fitur ini, sedangkan `0014_rw5_scope.sql` menautkan seluruh RT ke RW 5. M0 mencakup autentikasi email/kata sandi, pendaftaran dengan persetujuan, dan verifikasi RT. M1 mencakup countdown 3 detik, mode latihan, pembuatan insiden, antrean lokal/retry, inbox penerima, respons, status penanganan, kontak darurat, Realtime in-app, dan eskalasi best-effort setelah 60 detik. Broadcast mencakup inbox, status baca, dan penerbitan langsung untuk pengurus RT/RW/admin. PB-05 memungkinkan warga membuat tiket fasilitas, keamanan, hewan, atau listrik dan melampirkan foto opsional. Notifikasi tetap in-app; FCM push ke aplikasi tertutup dan SMS belum tersedia. Flutter 3.47.9/Dart 3.13.7 tersedia di `D:\DevTools\flutter`; cache Flutter dan Pub diarahkan ke `D:\DevTools`; Android SDK belum terpasang.
 
-Migration `0012_broadcast_publish.sql`, `0013_profile_management.sql`, `0014_rw5_scope.sql`, `0015_ticket_submission.sql`, dan Edge Function `broadcast-publish` sudah diterapkan ke proyek Supabase demo tertaut. Status migrasi lokal/remote cocok; kolom tiket dan bucket foto privat sudah diverifikasi. Jangan menaruh service-role key di aplikasi.
+Migrasi `0012_broadcast_publish.sql`, `0013_profile_management.sql`, `0014_rw5_scope.sql`, `0015_ticket_submission.sql`, dan Edge Function `broadcast-publish` sudah diterapkan ke proyek Supabase demo tertaut. Migrasi PB-06 `0016_ticket_escalation_reason.sql` perlu diterapkan sebelum uji live eskalasi. Jangan menaruh service-role key di aplikasi.
 
 ## Prasyarat
 
@@ -30,7 +30,7 @@ Migrasi `0015_ticket_submission.sql` sudah aktif pada project demo. Saat ini tab
 
 ## Penanganan tiket pengurus (PB-06)
 
-Pengurus RT membuka **Kelola tiket layanan** dari dashboard verifikasi warga. Pengurus RW dan admin membuka **Kelola tiket wilayah** dari inbox insiden. Daftar mengikuti RLS Supabase; RT hanya mengelola tiket RT sendiri, sedangkan RW/admin mengelola tiket sesuai aksesnya. Status dikelola berurutan: `baru` → `ditugaskan` → `diproses` → `selesai` → `ditutup`. Pengurus RT dapat mengeskalasi tiket level RT ke RW; setelah itu perubahan dilanjutkan pengurus RW. Setiap perubahan status/level dicatat otomatis di `tiket_riwayat`, dan foto tetap memakai akses privat. Target SLA tidak ditampilkan sebagai tenggat sampai aturan disepakati dan diisi.
+Pengurus RT membuka **Kelola tiket layanan** dari dashboard verifikasi warga. Pengurus RW dan admin membuka **Kelola tiket wilayah** dari inbox insiden. Daftar mengikuti RLS Supabase; RT hanya mengelola tiket RT sendiri, sedangkan RW/admin mengelola tiket sesuai aksesnya. Status dikelola berurutan: `baru` → `ditugaskan` → `diproses` → `selesai` → `ditutup`. Pengurus RT dapat mengeskalasi tiket level RT ke RW dengan alasan wajib; alasan dan perubahan level dicatat otomatis di `tiket_riwayat`. Setelah eskalasi, perubahan dilanjutkan pengurus RW. Foto tetap memakai akses privat. PB-06 menetapkan respons awal maksimal dua hari kerja, tetapi tenggat belum dihitung karena kalender hari kerja/libur dan aturan operasional SLA belum disepakati; aplikasi tidak mengarang tenggat.
 
 ## Broadcast
 

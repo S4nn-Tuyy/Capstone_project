@@ -452,9 +452,16 @@ class _TicketManagementDetailPageState
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(_historyIcon(event.action)),
                   title: Text(_historyLabel(event)),
-                  subtitle: Text(
-                    '${_dateLabel(event.createdAt)}'
-                    '${event.actorName == null ? '' : ' · ${event.actorName}'}',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_dateLabel(event.createdAt)}'
+                        '${event.actorName == null ? '' : ' · ${event.actorName}'}',
+                      ),
+                      if (event.note != null && event.note!.isNotEmpty)
+                        Text('Alasan: ${event.note}'),
+                    ],
                   ),
                 ),
             ],
@@ -530,31 +537,17 @@ class _TicketManagementDetailPageState
   }
 
   Future<void> _confirmEscalation() async {
-    final confirmed = await showDialog<bool>(
+    final reason = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eskalasi tiket ke RW?'),
-        content: const Text(
-          'Pengurus RT tidak lagi dapat mengubah tiket setelah dieskalasikan.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eskalasi'),
-          ),
-        ],
-      ),
+      builder: (_) => const _EscalationReasonDialog(),
     );
-    if (confirmed != true || !mounted) return;
+    if (reason == null || !mounted) return;
     setState(() => _saving = true);
     try {
       await widget.gateway.escalate(
         profile: widget.profile,
         ticketId: widget.ticket.id,
+        reason: reason,
       );
       widget.onChanged();
       if (!mounted) return;
@@ -611,4 +604,64 @@ class _TicketManagementDetailPageState
       .map((part) =>
           part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+class _EscalationReasonDialog extends StatefulWidget {
+  const _EscalationReasonDialog();
+
+  @override
+  State<_EscalationReasonDialog> createState() =>
+      _EscalationReasonDialogState();
+}
+
+class _EscalationReasonDialogState extends State<_EscalationReasonDialog> {
+  final _reasonController = TextEditingController();
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        scrollable: true,
+        title: const Text('Eskalasi tiket ke RW?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pengurus RT tidak lagi dapat mengubah tiket setelah '
+              'dieskalasikan. Tuliskan alasan agar tercatat di riwayat.',
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              key: const Key('ticket_escalation_reason'),
+              controller: _reasonController,
+              autofocus: true,
+              maxLines: 3,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Alasan eskalasi',
+                hintText: 'Jelaskan mengapa tiket perlu ditangani RW.',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: _reasonController.text.trim().isEmpty
+                ? null
+                : () => Navigator.pop(context, _reasonController.text.trim()),
+            child: const Text('Eskalasi'),
+          ),
+        ],
+      );
 }

@@ -80,6 +80,7 @@ class TicketHistoryEvent {
     this.levelBefore,
     this.levelAfter,
     this.actorName,
+    this.note,
   });
 
   final String action;
@@ -89,6 +90,7 @@ class TicketHistoryEvent {
   final String? levelBefore;
   final String? levelAfter;
   final String? actorName;
+  final String? note;
 
   factory TicketHistoryEvent.fromJson(Map<String, dynamic> json) {
     final actor = json['actor'] as Map<String, dynamic>?;
@@ -100,6 +102,7 @@ class TicketHistoryEvent {
       levelBefore: json['level_sebelum'] as String?,
       levelAfter: json['level_sesudah'] as String?,
       actorName: actor?['full_name'] as String?,
+      note: json['catatan'] as String?,
     );
   }
 }
@@ -118,6 +121,7 @@ abstract interface class TicketManagementGateway {
   Future<void> escalate({
     required ResidentProfile profile,
     required String ticketId,
+    required String reason,
   });
   Future<String> signedPhotoUrl(String path);
 }
@@ -135,7 +139,7 @@ class SupabaseTicketManagementGateway implements TicketManagementGateway {
       'nomor, jalan:jalan!unit_rumah_jalan_id_fkey(nama)), '
       'rt:rt!tiket_rt_id_fkey(kode, rw:rw!rt_rw_id_fkey(kode))';
   static const _historySelect = 'aksi, status_sebelum, status_sesudah, '
-      'level_sebelum, level_sesudah, created_at, '
+      'level_sebelum, level_sesudah, catatan, created_at, '
       'actor:profiles!tiket_riwayat_actor_id_fkey(full_name)';
   static const _statuses = {
     'baru',
@@ -210,14 +214,19 @@ class SupabaseTicketManagementGateway implements TicketManagementGateway {
   Future<void> escalate({
     required ResidentProfile profile,
     required String ticketId,
+    required String reason,
   }) async {
     _requireManager(profile);
     if (!const ['pengurus_rt', 'admin'].contains(profile.role)) {
       throw StateError('Hanya pengurus RT atau admin yang dapat mengeskalasi.');
     }
+    final normalizedReason = reason.trim();
+    if (normalizedReason.isEmpty || normalizedReason.length > 1000) {
+      throw ArgumentError.value(reason, 'reason');
+    }
     final row = await client
         .from('tiket')
-        .update({'level': 'rw'})
+        .update({'level': 'rw', 'alasan_eskalasi': normalizedReason})
         .eq('id', ticketId)
         .eq('level', 'rt')
         .select('id')
